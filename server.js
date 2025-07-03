@@ -6,6 +6,7 @@ import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import roomRoutes from './routes/roomRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import socketHandler from './sockets/socketHandler.js';
 
 dotenv.config();
@@ -22,6 +23,7 @@ mongoose.connect(process.env.MONGO_URI)
 //Routes
 app.use('/api/rooms', roomRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/auth', authRoutes);
 
 
 // SOCKET.IO INIT
