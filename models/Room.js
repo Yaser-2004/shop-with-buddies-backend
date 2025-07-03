@@ -13,7 +13,15 @@ const CartItemSchema = new mongoose.Schema({
 
 const RoomSchema = new mongoose.Schema({
   roomCode: { type: String, required: true, unique: true },
-  members: [String],
+  host: {
+    type: mongoose.Schema.Types.ObjectId, // Or just `String` if you're using email or username
+    ref: 'User',
+    required: true,
+  },
+  members: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   cart: [CartItemSchema],
   createdAt: { type: Date, default: Date.now }
 });
