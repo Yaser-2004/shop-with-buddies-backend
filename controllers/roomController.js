@@ -66,6 +66,29 @@ export const getRoomMembers = async (req, res) => {
   });
 };
 
+// GET /api/rooms/:roomCode/cart
+export const getSharedCart = async (req, res) => {
+  const { roomCode } = req.params;
+
+  const room = await Room.findOne({ roomCode }).populate('cart.productId');
+  if (!room) return res.status(404).json({ message: 'Room not found' });
+
+  const detailedCart = room.cart.map(item => ({
+    _id: item.productId._id,
+    title: item.productId.title,
+    price: item.productId.price,
+    image: item.productId.image,
+    description: item.productId.description,
+    quantity: item.quantity,
+    addedBy: item.addedBy,
+    votes: item.votes
+  }));
+
+  // console.log("Detailed Cart:", detailedCart);
+
+  res.json({ cart: detailedCart });
+};
+
 
 export const endRoom = async (req, res) => {
   const { roomCode } = req.body;

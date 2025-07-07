@@ -30,9 +30,54 @@ export default function socketHandler(io) {
     });
 
     // ADD TO CART
-    socket.on('add-to-cart', async ({ roomCode, item }) => {
-      socket.to(roomCode).emit('cart-updated', item);
+    socket.on('add-to-shared-cart', async ({ roomCode, item }) => {
+      try {
+        const room = await Room.findOne({ roomCode });
+        if (!room) {
+          console.error("Room not found:", roomCode);
+          return;
+        }
+
+        const existingItem = room.cart.find(cartItem =>
+          cartItem.productId.toString() === item.productId
+        );
+
+        if (existingItem) {
+          existingItem.quantity += 1;
+        } else {
+          room.cart.push({
+            productId: item.productId,
+            addedBy: item.addedBy, // user._id
+            quantity: 1,
+            votes: { up: [], down: [] }
+          });
+        }
+
+        await room.save();
+
+        // ✅ Re-fetch and populate cart with product details
+        const updatedRoom = await Room.findOne({ roomCode }).populate('cart.productId');
+
+        // Flatten cart to return product details directly
+        const populatedCart = updatedRoom.cart.map(cartItem => ({
+          _id: cartItem._id,
+          quantity: cartItem.quantity,
+          addedBy: cartItem.addedBy,
+          votes: cartItem.votes,
+          productId: cartItem.productId._id,
+          title: cartItem.productId.title,
+          price: cartItem.productId.price,
+          image: cartItem.productId.image,
+          description: cartItem.productId.description
+        }));
+
+        io.to(roomCode).emit('cart-updated', populatedCart);
+
+      } catch (err) {
+        console.error("Error adding item to shared cart:", err);
+      }
     });
+
 
     // HOVERED PRODUCT
     socket.on('hover-product', ({ roomCode, user, productName }) => {
@@ -68,11 +113,27 @@ export default function socketHandler(io) {
       }
     });
 
-
-
     socket.on('end-room', (roomCode) => {
-    io.to(roomCode).emit('room-ended');
-    io.socketsLeave(roomCode); // disconnect all from room
+      io.to(roomCode).emit('room-ended');
+      io.socketsLeave(roomCode); // disconnect all from room
+    });
+
+    socket.on('call-offer', ({ offer, roomCode }) => {
+      console.log('Forwarding offer to room:', roomCode);
+      socket.to(roomCode).emit('call-offer', { offer, roomCode });
+    });
+
+    socket.on('call-answer', ({ answer, roomCode }) => {
+      socket.to(roomCode).emit('call-answer', { answer, roomCode });
+    });
+
+    socket.on('ice-candidate', ({ candidate, roomCode }) => {
+      socket.to(roomCode).emit('ice-candidate', { candidate, roomCode });
+    });
+
+    socket.on("focus-product", ({ roomCode, productId, sender }) => {
+      // Broadcast to others in the room
+      socket.to(roomCode).emit("focus-product", { productId, sender });
     });
 
     socket.on('disconnect', () => {

@@ -1,13 +1,19 @@
 import mongoose from 'mongoose';
 
 const CartItemSchema = new mongoose.Schema({
-  productId: mongoose.Schema.Types.ObjectId,
-  productTitle: String,
-  addedBy: String,
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product', // <- this is required
+  },
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   quantity: { type: Number, default: 1 },
   votes: {
-    up: [String],
-    down: [String],
+    up: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    down: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
   }
 }, { _id: false }); // prevents duplicate _id creation for embedded subdocs
 
