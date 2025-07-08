@@ -12,7 +12,11 @@ import agoraRoutes from './routes/agoraRoutes.js';
 
 dotenv.config();
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:5173", "https://shop-with-buddies-frontend.vercel.app"],
+  methods: ["GET", "POST"],
+  credentials: true
+}));
 app.use(express.json());
 
 // MongoDB connection
@@ -32,7 +36,7 @@ app.use('/agora', agoraRoutes);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",  // React frontend
+    origin: ["http://localhost:5173", "https://shop-with-buddies-frontend.vercel.app"],  // React frontend
     methods: ["GET", "POST"]
   }
 });
