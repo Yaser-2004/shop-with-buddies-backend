@@ -8,6 +8,7 @@ import roomRoutes from './routes/roomRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import socketHandler from './sockets/socketHandler.js';
+import agoraRoutes from './routes/agoraRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -24,6 +25,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api/rooms', roomRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/agora', agoraRoutes);
 
 
 // SOCKET.IO INIT

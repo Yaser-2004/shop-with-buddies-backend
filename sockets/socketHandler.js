@@ -118,17 +118,15 @@ export default function socketHandler(io) {
       io.socketsLeave(roomCode); // disconnect all from room
     });
 
-    socket.on('call-offer', ({ offer, roomCode }) => {
-      console.log('Forwarding offer to room:', roomCode);
-      socket.to(roomCode).emit('call-offer', { offer, roomCode });
-    });
+    socket.on('start-agora-call', ({ roomCode, token, channelName, fromUser }) => {
+      console.log(`📞 Agora call started in room ${roomCode} by user ${fromUser}`);
 
-    socket.on('call-answer', ({ answer, roomCode }) => {
-      socket.to(roomCode).emit('call-answer', { answer, roomCode });
-    });
-
-    socket.on('ice-candidate', ({ candidate, roomCode }) => {
-      socket.to(roomCode).emit('ice-candidate', { candidate, roomCode });
+      // Notify everyone else in the room
+      socket.to(roomCode).emit('incoming-agora-call', {
+        token,
+        channelName,
+        fromUser, // optional: used for UI to show caller's name
+      });
     });
 
     socket.on("focus-product", ({ roomCode, productId, sender }) => {
