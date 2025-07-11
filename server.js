@@ -9,11 +9,12 @@ import productRoutes from './routes/productRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import socketHandler from './sockets/socketHandler.js';
 import agoraRoutes from './routes/agoraRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 
 dotenv.config();
 const app = express();
 app.use(cors({
-  origin: ["http://localhost:5173", "https://shop-with-buddies-frontend.vercel.app"],
+  origin: ["https://shop-with-buddies-frontend.vercel.app", "http://localhost:5173", "http://localhost:8080"],
   methods: ["GET", "POST"],
   credentials: true
 }));
@@ -30,6 +31,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/agora', agoraRoutes);
+app.use("/api/orders", orderRoutes);
 
 
 // SOCKET.IO INIT

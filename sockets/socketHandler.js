@@ -1,33 +1,43 @@
+import mongoose from 'mongoose';
 import Room from '../models/Room.js';
 import User from '../models/User.js';
+
+const checkoutConfirmations = {}; // { [roomCode]: { [userId]: true/false } }
 
 export default function socketHandler(io) {
   io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
     // JOIN ROOM
-    socket.on('join-room', async ({ roomCode, userId }) => {
-        socket.join(roomCode);
-        // io.to(roomCode).emit('user-joined', { userId });
+    // sockets/socketHandler.js
+    socket.on("join-room", async ({ roomCode, userId }) => {
+      try {
+        // convert to ObjectId once so type is always consistent
+        const uid = new mongoose.Types.ObjectId(userId);
 
-        try {
-            const room = await Room.findOne({ roomCode });
-            if (!room) {
-              return socket.emit('error', { message: 'Room not found' });
-            }
-            const alreadyMember = room.members.some(memberId => memberId.toString() === userId);
+        // add only if not present
+        const room = await Room.findOneAndUpdate(
+          { roomCode },
+          { $addToSet: { members: uid } },   // <-- magic line
+          { new: true }                      // return updated doc
+        ).populate("members", "-password");   // optional populate
 
-            if (!alreadyMember) {
-              room.members.push(userId);
-              await room.save();
-            }
-
-            const user = await User.findById(userId).select('-password');
-            io.to(roomCode).emit('user-joined', { user });
-        } catch (err) {
-            console.error('Error updating room members:', err);
+        if (!room) {
+          return socket.emit("error", { message: "Room not found" });
         }
+
+        // Emit the joined user to others (exclude password field)
+        const user = await User.findById(uid).select("-password");
+        // Finally join the actual socket room
+        socket.join(roomCode);
+        socket.to(roomCode).emit("user-joined", { user });
+
+
+      } catch (err) {
+        console.error("Error joining room:", err);
+      }
     });
+
 
     // ADD TO CART
     socket.on('add-to-shared-cart', async ({ roomCode, item }) => {
@@ -133,6 +143,30 @@ export default function socketHandler(io) {
       // Broadcast to others in the room
       socket.to(roomCode).emit("focus-product", { productId, sender });
     });
+
+    socket.on("checkout-confirm", ({ roomCode, userId }) => {
+      if (!checkoutConfirmations[roomCode]) {
+        checkoutConfirmations[roomCode] = {};
+      }
+
+      checkoutConfirmations[roomCode][userId] = true;
+
+      Room.findOne({ roomCode }).then(room => {
+        if (!room) return;
+
+        const allConfirmed = room.members.every(memberId =>
+          checkoutConfirmations[roomCode][memberId.toString()]
+        );
+
+        if (allConfirmed) {
+          io.to(roomCode).emit("all-users-confirmed-checkout");
+
+          // ✅ Optionally reset after confirmation
+          delete checkoutConfirmations[roomCode];
+        }
+      });
+    });
+
 
     socket.on('disconnect', () => {
       console.log('User disconnected:', socket.id);
