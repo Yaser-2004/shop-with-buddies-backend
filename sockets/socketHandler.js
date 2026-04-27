@@ -99,16 +99,24 @@ export default function socketHandler(io) {
     // CHAT MESSAGE
     socket.on('send-message', async ({ roomCode, message }) => {
 
-      let enrichedMessage = { ...message };
+      // ✅ STEP 1: Emit instantly (NO WAIT)
+      io.to(roomCode).emit('receive-message', message);
 
-      const analyzed = await analyzeMessage(message.text);
+      try {
+        // ✅ STEP 2: Analyze in background
+        const analyzed = await analyzeMessage(message.text);
 
-      if (analyzed.intent === "product_search") {
-        enrichedMessage.intent = analyzed.intent;
-        enrichedMessage.metadata = analyzed.metadata;
+        if (analyzed.intent === "product_search") {
+          io.to(roomCode).emit('update-message', {
+            id: message.id, // 🔥 same id
+            intent: analyzed.intent,
+            metadata: analyzed.metadata,
+          });
+        }
+
+      } catch (err) {
+        console.error("LLM error:", err);
       }
-
-      io.to(roomCode).emit('receive-message', enrichedMessage);
     });
 
     socket.on("search-products", async ({ roomCode, metadata }) => {
