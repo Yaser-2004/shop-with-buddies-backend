@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import Room from '../models/Room.js';
 import User from '../models/User.js';
+import Product from "../models/Product.js";
+import { analyzeMessage } from "../services/llmService.js";
 
 const checkoutConfirmations = {}; // { [roomCode]: { [userId]: true/false } }
 
@@ -95,9 +97,47 @@ export default function socketHandler(io) {
     });
 
     // CHAT MESSAGE
-    socket.on('send-message', ({ roomCode, message }) => {
-        console.log(`Received message for room ${roomCode}:`, message);
-      socket.to(roomCode).emit('receive-message', message);
+    socket.on('send-message', async ({ roomCode, message }) => {
+
+      let enrichedMessage = { ...message };
+
+      const analyzed = await analyzeMessage(message.text);
+
+      if (analyzed.intent === "product_search") {
+        enrichedMessage.intent = analyzed.intent;
+        enrichedMessage.metadata = analyzed.metadata;
+      }
+
+      io.to(roomCode).emit('receive-message', enrichedMessage);
+    });
+
+    socket.on("search-products", async ({ roomCode, metadata }) => {
+      try {
+        const { category, max_price } = metadata;
+
+        // Extract keyword (simple normalization)
+        const keyword = category.toLowerCase();
+
+        const query = {
+          title: { $regex: keyword, $options: "i" }, // 🔥 only title search
+          stock: { $gt: 0 }
+        };
+
+        if (max_price) {
+          query.price = { $lte: max_price };
+        }
+
+        const products = await Product.find(query)
+          .sort({ price: 1 }) // cheapest first
+          .limit(6);
+
+        io.to(roomCode).emit("search-results", {
+          products,
+        });
+
+      } catch (err) {
+        console.error("Search error:", err);
+      }
     });
 
     socket.on('leave-room', async ({ roomCode, userId }) => {

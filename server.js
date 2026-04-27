@@ -38,7 +38,7 @@ app.use("/api/orders", orderRoutes);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "https://shop-with-buddies-frontend.vercel.app"],  // React frontend
+    origin: ["http://localhost:8080", "https://shop-with-buddies-frontend.vercel.app"],  // React frontend
     methods: ["GET", "POST"]
   }
 });
