@@ -1,8 +1,10 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const registerUser = async (req, res) => {
   try {
@@ -43,6 +45,12 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
+    if (user.provider === 'google') {
+      return res.status(400).json({
+        message: "Please login using Google"
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
@@ -51,6 +59,47 @@ export const loginUser = async (req, res) => {
     res.json({ message: "Login successful", token, user });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const googleAuth = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    const { email, given_name, family_name } = payload;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        email,
+        firstName: given_name,
+        lastName: family_name,
+        password: null,
+        provider: 'google'
+      });
+    }
+
+    const jwtToken = jwt.sign({ id: user._id }, JWT_SECRET, {
+      expiresIn: '1d'
+    });
+
+    res.json({
+      message: "Google authentication successful",
+      user,
+      token: jwtToken
+    });
+
+  } catch (err) {
+    console.error("Google auth error:", err);
+    res.status(401).json({ message: "Google authentication failed" });
   }
 };
 
