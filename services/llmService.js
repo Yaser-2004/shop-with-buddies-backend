@@ -41,21 +41,6 @@ User: ${text}
     } catch (err) {
         console.error("Gemini error:", err);
 
-        // // 🔥 fallback (KEEP THIS)
-        // const lower = text.toLowerCase();
-
-        // if (lower.includes("shoes") && lower.includes("under")) {
-        //   const priceMatch = lower.match(/\d+/);
-
-        //   return {
-        //     intent: "product_search",
-        //     metadata: {
-        //       category: "shoes",
-        //       max_price: priceMatch ? Number(priceMatch[0]) : null
-        //     }
-        //   };
-        // }
-
         return { intent: null };
     }
 }

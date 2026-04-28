@@ -104,7 +104,10 @@ export default function socketHandler(io) {
 
       const text = message.text.toLowerCase();
       const shouldAnalyze = /buy|under|less than|price|looking for|want|need|search/i.test(text);
-      if (!shouldAnalyze) return;
+      if (!shouldAnalyze) {
+        console.log("Not analyzing message");
+        return;
+      }
 
       try {
         // ✅ STEP 2: Analyze in background
