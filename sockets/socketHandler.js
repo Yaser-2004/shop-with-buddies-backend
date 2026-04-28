@@ -102,6 +102,10 @@ export default function socketHandler(io) {
       // ✅ STEP 1: Emit instantly (NO WAIT)
       io.to(roomCode).emit('receive-message', message);
 
+      const text = message.text.toLowerCase();
+      const shouldAnalyze = /buy|under|less than|price|looking for|want|need|search/i.test(text);
+      if (!shouldAnalyze) return;
+
       try {
         // ✅ STEP 2: Analyze in background
         const analyzed = await analyzeMessage(message.text);
